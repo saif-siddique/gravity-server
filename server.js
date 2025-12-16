@@ -9,19 +9,17 @@ const { initializeSocket } = require('./socket/socketHandler');
 
 dotenv.config();
 
-const instance = await mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB Connected'))
-  .catch(err => console.error('MongoDB Connection Error:', err));
-
-if (!instance) res.status(400).json({message : "Mongodb connection failed"});
-
 const app = express();
 const server = http.createServer(app);
+
+// --- CORRECTION 1: Centralized CORS Configuration ---
+// Define allowed origins based on environment to avoid typos
+const ALLOWED_ORIGIN = process.env.SOCKET_CORS_ORIGIN || "https://gravityhostel.vercel.app";
 
 // Initialize Socket.IO with CORS
 const io = new Server(server, {
   cors: {
-    origin: process.env.SOCKET_CORS_ORIGIN,
+    origin: ALLOWED_ORIGIN,
     credentials: true
   }
 });
@@ -29,28 +27,18 @@ const io = new Server(server, {
 // Initialize socket handlers
 initializeSocket(io);
 
-// Middleware
-// app.use(cors({
-//   origin: process.env.SOCKET_CORS_ORIGIN, // Frontend URL
-//   credentials: true // Allow cookies
-// }));
-
-// import cors from "cors";
-
+// --- CORRECTION 2: Consistent Express CORS ---
 app.use(cors({
-  origin: "https://gravityhostel.vercel.app",
+  origin: ALLOWED_ORIGIN,
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
 }));
 
-app.options("*", cors());
+// app.options("*", cors()); // Usually not needed if app.use(cors) is set up correctly above, but harmless if kept.
 
 app.use(express.json());
 app.use(cookieParser());
-
-// Database Connection
-
 
 // Routes
 const authRoutes = require('./routes/authRoutes');
@@ -65,9 +53,24 @@ app.get('/', (req, res) => {
   res.send('Gravity Hostel Management API is running');
 });
 
-const PORT = process.env.PORT;
+// --- CORRECTION 3: Proper DB Connection & Server Start ---
+// Wrap connection in an async function to avoid top-level await issues
+const startServer = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('✅ MongoDB Connected');
+    
+    // Only listen if DB connects successfully
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🔌 Socket.IO ready for connections from: ${ALLOWED_ORIGIN}`);
+    });
 
-server.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`🔌 Socket.IO ready for connections`);
-});
+  } catch (err) {
+    console.error('❌ MongoDB Connection Error:', err);
+    process.exit(1); // Exit process with failure
+  }
+};
+
+startServer();
