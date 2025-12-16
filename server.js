@@ -30,10 +30,21 @@ const io = new Server(server, {
 initializeSocket(io);
 
 // Middleware
+// app.use(cors({
+//   origin: process.env.SOCKET_CORS_ORIGIN, // Frontend URL
+//   credentials: true // Allow cookies
+// }));
+
+// import cors from "cors";
+
 app.use(cors({
-  origin: process.env.SOCKET_CORS_ORIGIN, // Frontend URL
-  credentials: true // Allow cookies
+  origin: "https://gravityhostel.vercel.app",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
 }));
+
+
 app.use(express.json());
 app.use(cookieParser());
 
