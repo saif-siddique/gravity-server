@@ -9,7 +9,7 @@ const { initializeSocket } = require('./socket/socketHandler');
 
 dotenv.config();
 
-const instance = await mongoose.connect(`${process.env.MONGO_URI}/hostler-database`)
+const instance = await mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Connected'))
   .catch(err => console.error('MongoDB Connection Error:', err));
 
